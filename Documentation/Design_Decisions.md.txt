@@ -1,0 +1,1049 @@
+# Design Decisions
+
+## Project 01: Automotive Cruise Control
+
+## Professional Version 2
+
+---
+
+# GENERAL ENGINEERING DECISIONS
+
+---
+
+# Decision 01 - Modular MATLAB Architecture
+
+## Decision
+
+The project was separated into independent MATLAB functions and dedicated modules for modelling, controller design, analysis, validation, and reporting.
+
+## Reason
+
+A modular architecture improves:
+
+* Maintainability
+* Testing
+* Debugging
+* Code reuse
+* Traceability
+* Future extensibility
+
+The project follows the structure:
+
+Parameters
+|
+v
+Plant Model
+|
+v
+Controller Design
+|
+v
+Simulation
+|
+v
+Analysis
+|
+v
+Validation
+|
+v
+Results / Reports
+
+Key modules include:
+
+* Parameters.m
+* BuildPlant.m
+* BuildStateSpaceModel.m
+* BuildLQRPlant.m
+* DesignPController.m
+* DesignPIController.m
+* DesignPIDController.m
+* DesignFilteredPIDController.m
+* DesignLQRController.m
+* ComputeMetrics.m
+* ValidatePIController.m
+* ValidateLQRController.m
+
+---
+
+# Decision 02 - Continuous-Time Transfer-Function Plant
+
+## Decision
+
+The baseline vehicle model was implemented as a continuous-time MATLAB transfer function.
+
+## Reason
+
+The simplified vehicle longitudinal dynamics are linear and are suitable for classical control-system analysis and controller development.
+
+The vehicle dynamics are:
+
+m * dv/dt + b * v = F
+
+where:
+
+m = vehicle mass [kg]
+b = damping coefficient [Ns/m]
+v = vehicle velocity [m/s]
+F = applied longitudinal force [N]
+
+The transfer function is:
+
+G(s) = 1 / (m*s + b)
+
+with:
+
+m = 1000 kg
+b = 50 Ns/m
+
+Therefore:
+
+G(s) = 1 / (1000*s + 50)
+
+---
+
+# Decision 03 - Separate Controller Design From Plant Model
+
+## Decision
+
+Controller design was implemented independently from the vehicle plant.
+
+## Reason
+
+This allows the controller architecture to evolve from:
+
+P -> PI -> PID -> LQR
+
+without unnecessarily modifying the underlying vehicle model.
+
+This separation also enables consistent comparison between different controller strategies.
+
+---
+
+# Decision 04 - MATLAB-Simulink Cross-Validation
+
+## Decision
+
+Final controller implementations must be cross-validated between MATLAB and Simulink.
+
+## Reason
+
+Independent implementations provide a means of detecting:
+
+* Modelling errors
+* Incorrect block connections
+* Incorrect controller parameters
+* Incorrect simulation settings
+* Signal-routing errors
+* Implementation inconsistencies
+
+The project acceptance criterion was:
+
+Maximum absolute error < 1e-5
+
+### Phase 01 Result
+
+* Maximum Error = 2.306e-06
+* RMSE = 4.928e-07
+* Result = PASS
+
+### Phase 02 Result
+
+* Maximum Error = 2.095909e-06
+* RMSE = 2.099794e-07
+* Result = PASS
+
+The same validation philosophy was applied to the later controller implementations.
+
+---
+
+# Decision 05 - Automated Performance Metrics
+
+## Decision
+
+Controller performance is evaluated using automated MATLAB analysis rather than visual inspection alone.
+
+## Reason
+
+Automated metrics improve consistency, repeatability, and objectivity.
+
+The project evaluates:
+
+* Rise Time
+* Settling Time
+* Overshoot
+* Peak Value
+* Peak Time
+* Steady-State Error
+* Closed-Loop Poles
+* Stability
+* Peak Control Effort
+* RMS Control Effort
+
+The exact metrics used depend on the controller stage.
+
+---
+
+# Decision 06 - Documentation-Driven Development
+
+## Decision
+
+Engineering documentation is maintained alongside controller development.
+
+## Reason
+
+Professional control-system development requires:
+
+* Traceability
+* Design justification
+* Validation evidence
+* Reproducibility
+* Knowledge transfer
+* Clear engineering decisions
+
+The project maintains separate documentation for:
+
+* Engineering decisions
+* Engineering notes
+* Results
+* Validation evidence
+
+---
+
+# PHASE 01 - P CONTROLLER DESIGN DECISIONS
+
+---
+
+# Decision 07 - Establish P Controller as Baseline
+
+## Decision
+
+A proportional controller was selected as the initial controller.
+
+The controller structure is:
+
+C(s) = Kp
+
+## Reason
+
+The P controller provides the simplest closed-loop control architecture and establishes a measurable baseline before introducing additional controller dynamics.
+
+---
+
+# Decision 08 - Proportional Gain Selection
+
+## Decision
+
+The proportional gain was selected using sensitivity analysis.
+
+The evaluated values were:
+
+Kp = [50, 100, 200, 500, 1000, 2000]
+
+The selected value was:
+
+Kp = 500
+
+## Reason
+
+Lower gains resulted in slower transient response and larger steady-state error.
+
+Higher gains improved response speed but increased control effort.
+
+The selected value provided a suitable engineering compromise.
+
+### Selected P Controller Performance
+
+* Rise Time = 3.9946 s
+* Settling Time = 7.1129 s
+* Overshoot = 0 %
+* Steady-State Error = 0.0909
+* Closed-Loop Pole = -0.55
+
+## Engineering Conclusion
+
+The P controller was accepted as the baseline controller.
+
+The remaining steady-state error demonstrated the need for integral action.
+
+---
+
+# PHASE 02 - PI CONTROLLER DESIGN DECISIONS
+
+---
+
+# Decision 09 - Introduce Integral Action
+
+## Decision
+
+The P controller was extended to a PI controller while keeping:
+
+Kp = 500
+
+fixed.
+
+The controller structure became:
+
+C(s) = Kp + Ki/s
+
+## Reason
+
+The P controller leaves a non-zero steady-state error for the cruise-control plant.
+
+Integral action was therefore introduced to improve steady-state tracking accuracy.
+
+Keeping Kp fixed also allows the effect of integral action to be studied independently.
+
+---
+
+# Decision 10 - Integral Gain Selection
+
+## Decision
+
+The integral gain was selected using sensitivity analysis.
+
+The evaluated values were:
+
+Ki = [5, 10, 20, 40, 80]
+
+with:
+
+Kp = 500
+
+held constant.
+
+## Evaluation Criteria
+
+The selection considered:
+
+* Steady-State Error
+* Rise Time
+* Settling Time
+* Overshoot
+* Closed-Loop Pole Location
+* Damping Behaviour
+
+## Result
+
+The selected value was:
+
+Ki = 20
+
+### Selected PI Controller Performance
+
+* Rise Time = 4.6538 s
+* Settling Time = 10.2954 s
+* Overshoot = 0 %
+* Steady-State Error = approximately 0.000459
+* Closed-Loop Poles = approximately -0.5108 and -0.0392
+
+## Reason
+
+Ki = 20 provided a suitable balance between steady-state accuracy and transient behaviour.
+
+Higher integral gains were not selected because they produced increasingly aggressive dynamics.
+
+For example:
+
+* Ki = 40 produced approximately 3.05 % overshoot.
+* Ki = 80 produced approximately 9.47 % overshoot and complex-conjugate closed-loop poles.
+
+## Engineering Conclusion
+
+The final Phase 02 controller was:
+
+Kp = 500
+Ki = 20
+
+---
+
+# Decision 11 - Separate P and I Paths in Simulink
+
+## Decision
+
+The PI controller was implemented using separate proportional and integral paths rather than relying on a single combined controller block.
+
+## Reason
+
+The separate-path implementation provides:
+
+* Transparent controller architecture
+* Independent inspection of P and I contributions
+* Direct correspondence with the mathematical controller
+* Easier debugging
+* Easier engineering verification
+
+Both paths receive the same error signal and their outputs are summed before entering the plant.
+
+---
+
+# Decision 12 - Ideal Linear PI Validation
+
+## Decision
+
+The initial PI MATLAB-Simulink validation was performed using the ideal linear plant/controller representation without actuator saturation.
+
+## Reason
+
+The objective of this validation stage was to verify the mathematical PI implementation against the corresponding Simulink model.
+
+Introducing actuator nonlinearities at this stage would make direct analytical cross-validation less straightforward.
+
+Actuator dynamics and constraints were subsequently introduced as part of the LQR development.
+
+---
+
+# Decision 13 - PI Simulation Horizon
+
+## Decision
+
+The PI controller was validated using a simulation horizon of:
+
+120 s
+
+## Reason
+
+The earlier 20 s simulation horizon did not allow the slow PI dynamics to sufficiently approach steady state.
+
+This created an artificial discrepancy between MATLAB and Simulink results.
+
+The simulation horizon was therefore increased to 120 s so that both implementations were evaluated over the same meaningful time interval.
+
+### Final PI Validation
+
+* Maximum Error = 2.095909e-06
+* RMSE = 2.099794e-07
+* Acceptance Limit = 1e-5
+* Result = PASS
+
+---
+
+# PHASE 03 - PID CONTROLLER DESIGN DECISIONS
+
+---
+
+# Decision 14 - Extend PI to PID
+
+## Decision
+
+The validated PI controller was extended to a PID controller.
+
+The development sequence was maintained as:
+
+P -> PI -> PID
+
+## Reason
+
+The PID stage provides the opportunity to investigate derivative action and transient-response shaping while maintaining the same underlying vehicle plant.
+
+---
+
+# Decision 15 - Keep Existing PI Gains for Initial Kd Study
+
+## Decision
+
+The initial derivative-gain study retained:
+
+Kp = 500
+Ki = 20
+
+while varying Kd.
+
+## Reason
+
+Changing one gain at a time provides a controlled sensitivity experiment.
+
+This allows the isolated effect of derivative action to be studied without simultaneously changing proportional and integral behaviour.
+
+---
+
+# Decision 16 - Perform Kd Sensitivity Analysis
+
+## Decision
+
+The derivative gain was evaluated over:
+
+Kd = [0, 5, 10, 20, 40, 80]
+
+## Reason
+
+A sensitivity study provides measured evidence of derivative-action effects instead of selecting Kd from intuition.
+
+The case:
+
+Kd = 0
+
+represents the PI baseline.
+
+---
+
+# Decision 17 - Do Not Assume Derivative Action Must Improve Performance
+
+## Decision
+
+A non-zero derivative gain was not assumed to be automatically beneficial.
+
+## Reason
+
+The vehicle plant is first-order and the PI controller already provides zero overshoot.
+
+The sensitivity study showed that increasing Kd alone provided limited improvement and could increase response time and control demand.
+
+Therefore, derivative action was retained only where supported by measured engineering behaviour.
+
+---
+
+# Decision 18 - Include Control Effort in PID Evaluation
+
+## Decision
+
+Control effort was included as a controller-selection metric.
+
+## Reason
+
+Controller performance cannot be judged only from output tracking.
+
+A controller with a fast response may require excessive actuator effort.
+
+Therefore, the project evaluates:
+
+* Peak Control Effort
+* RMS Control Effort
+
+alongside conventional response metrics.
+
+---
+
+# Decision 19 - Use a Filtered Derivative
+
+## Decision
+
+The final PID implementation uses a filtered derivative:
+
+Kd * (N*s / (s + N))
+
+instead of the ideal derivative:
+
+Kd * s
+
+## Reason
+
+The ideal derivative has unbounded high-frequency gain and is highly sensitive to measurement noise.
+
+A filtered derivative is more representative of practical controller implementation.
+
+The filter coefficient N provides a trade-off between derivative responsiveness and high-frequency sensitivity.
+
+---
+
+# Decision 20 - Systematic PID Gain Search
+
+## Decision
+
+A defined PID gain search was performed using:
+
+Kp = [400, 500, 600]
+
+Ki = [10, 20, 30]
+
+Kd = [0, 10, 20]
+
+## Reason
+
+A systematic search provides objective evidence for controller selection and demonstrates automated MATLAB-based engineering analysis.
+
+The search was intentionally limited to a meaningful engineering region rather than performing an unnecessarily large brute-force optimization.
+
+---
+
+# Decision 21 - Define Project-Level PID Requirements
+
+## Decision
+
+The following requirements were established for PID candidate screening:
+
+* Closed-loop stable
+* Settling Time < 10 s
+* Overshoot <= 5 %
+* Steady-State Error < 0.005
+
+## Reason
+
+Explicit project-level requirements provide objective screening criteria.
+
+These values are engineering targets for the simplified cruise-control model and are not claimed as universal automotive standards.
+
+---
+
+# Decision 22 - Select PID Candidate
+
+## Decision
+
+The PID candidate was selected as:
+
+Kp = 500
+Ki = 30
+Kd = 20
+
+The candidate achieved approximately:
+
+* Rise Time = 4.2749 s
+* Settling Time = 6.8986 s
+* Overshoot = 0.97943 %
+* Steady-State Error = 0.00048718
+* Stable = Yes
+
+## Reason
+
+The selected candidate satisfied the defined project-level requirements and provided a suitable balance between:
+
+* Transient response
+* Steady-state accuracy
+* Overshoot
+* Control effort
+
+The controller was therefore selected as the classical-control benchmark.
+
+---
+
+# Decision 23 - Finalize Practical PID Implementation
+
+## Decision
+
+The final PID implementation uses:
+
+Kp = 500
+Ki = 30
+Kd = 20
+N = 10
+
+## Reason
+
+The filtered implementation provides practical derivative behaviour while avoiding the limitations of an ideal differentiator.
+
+The final PID result demonstrated approximately:
+
+* Rise Time = 4.26 s
+* Settling Time = 6.87 s
+* Overshoot = 1.03 %
+* Essentially zero steady-state error
+
+## Engineering Conclusion
+
+The PID controller was frozen as the classical-control benchmark for comparison with the later LQR controller.
+
+Further PID tuning was intentionally stopped to prevent unnecessary project-scope expansion.
+
+---
+
+# PHASE 04 - LQR CONTROLLER DESIGN DECISIONS
+
+---
+
+# Decision 24 - Introduce LQR as Modern Control Benchmark
+
+## Decision
+
+LQR was introduced after completing and freezing the classical P, PI, and PID development.
+
+## Reason
+
+The objective was to demonstrate the transition from classical feedback control to modern state-space control.
+
+The LQR stage introduces:
+
+* State-space modelling
+* Full-state feedback
+* Controllability analysis
+* Q/R weighting
+* Actuator-aware modelling
+* Control-effort optimisation
+
+---
+
+# Decision 25 - Include Actuator Dynamics in the LQR Model
+
+## Decision
+
+The LQR design uses an actuator-aware two-state model rather than the ideal vehicle model alone.
+
+The vehicle dynamics are:
+
+m * dv/dt + b * v = F
+
+The actuator dynamics are:
+
+tau_a * dF/dt + F = u
+
+with:
+
+tau_a = 0.5 s
+
+The state vector is:
+
+x = [v; F]
+
+where:
+
+v = vehicle speed
+F = actuator force
+
+## Reason
+
+A physical actuator cannot change force instantaneously.
+
+Including actuator dynamics therefore provides a more realistic model for state-feedback controller design.
+
+---
+
+# Decision 26 - Verify Controllability Before LQR Design
+
+## Decision
+
+Controllability was explicitly verified before calculating the LQR gain.
+
+The actuator-aware model was found to have:
+
+Controllability rank = 2 / 2
+
+for the two-state system.
+
+## Reason
+
+Full-state feedback LQR requires the relevant states to be controllable.
+
+## Engineering Conclusion
+
+The system was confirmed to be fully controllable and suitable for LQR design.
+
+---
+
+# Decision 27 - Select Baseline LQR Q/R Weighting
+
+## Decision
+
+The baseline LQR weighting matrices were selected as:
+
+Q = [1  0
+0  0]
+
+R = 2.0408e-06
+
+The resulting feedback gain was:
+
+K = [637.7980  0.2798]
+
+The resulting closed-loop poles were approximately:
+
+-0.7581
+-1.8514
+
+## Reason
+
+The selected weighting establishes a baseline trade-off between vehicle-speed regulation and actuator effort.
+
+The selection was subsequently evaluated through Q/R sensitivity analysis rather than being treated as universally optimal.
+
+---
+
+# Decision 28 - Evaluate Relative Q/R Weighting
+
+## Decision
+
+The effect of relative Q/R weighting was evaluated systematically.
+
+## Reason
+
+LQR inherently balances state deviation against control effort.
+
+The sensitivity study demonstrated:
+
+* Greater state-performance weighting results in faster response but higher control demand.
+* Greater control penalty reduces control demand but results in slower response.
+
+Therefore, the engineering decision is based on the relative balance between performance and actuator effort.
+
+---
+
+# Decision 29 - Treat Actuator Capability as a Hard Constraint
+
+## Decision
+
+The maximum actuator force was defined as:
+
+Fmax = 700 N
+
+A controller demanding significantly more than this physical capability cannot be considered directly implementable.
+
+## Reason
+
+Physical actuator limitations must be included in controller evaluation.
+
+Therefore, LQR candidates were evaluated not only by tracking performance but also by actuator feasibility.
+
+---
+
+# Decision 30 - Evaluate LQR Sensitivity Against Actuator Feasibility
+
+## Decision
+
+The LQR sensitivity study compared controller performance against the 700 N actuator constraint.
+
+Representative results:
+
+## Case                         Peak Demand       Feasible
+
+Low State Priority           497.50 N           Yes
+Baseline                     701.79 N           No
+Higher State Priority        991.22 N           No
+Strong Control Penalty       317.02 N           Yes
+
+## Engineering Conclusion
+
+The fastest controller is not automatically the best controller.
+
+Actuator capability is treated as a physical design constraint.
+
+---
+
+# Decision 31 - Retain Baseline LQR Configuration for Final Validation
+
+## Decision
+
+The baseline LQR configuration was retained for final actuator-constrained validation.
+
+The baseline design produced an ideal feedforward command of approximately:
+
+Nbar = 701.786235 N
+
+## Reason
+
+The baseline design provides strong transient performance and only slightly exceeds the actuator limit.
+
+The difference between ideal demand and actuator capability is:
+
+701.786235 N - 700 N = 1.786235 N
+
+This small exceedance justified evaluating the controller with explicit actuator saturation rather than immediately discarding the design.
+
+---
+
+# Decision 32 - Distinguish Raw LQR Command From Actual Actuator Output
+
+## Decision
+
+The raw LQR command and the physically achievable actuator output are treated as separate quantities.
+
+The architecture is:
+
+LQR Controller
+|
+v
+Raw Command
+|
+v
+Actuator Saturation
+|
+v
+Actual Actuator Force
+
+## Reason
+
+An ideal controller command may exceed physical actuator capability.
+
+Reporting only the raw controller output would therefore give an incomplete representation of the implemented system.
+
+---
+
+# Decision 33 - Validate LQR With Actuator Saturation
+
+## Decision
+
+The final LQR validation explicitly included the 700 N actuator saturation.
+
+## Result
+
+The validation produced:
+
+* Raw Control Peak = 701.786235 N
+* Actual Control Peak = 700.000000 N
+* Saturated Samples = 5 / 120001
+* Saturation Percentage = 0.0042 %
+
+The final closed-loop response was:
+
+* Rise Time = 3.264 s
+* Settling Time = 5.852 s
+* Overshoot = 0 %
+* Final Speed = 1.000000 m/s
+* Steady-State Error = 0
+
+## Engineering Conclusion
+
+The actuator saturation was minor and did not prevent the required tracking performance.
+
+The saturation is therefore explicitly documented rather than hidden or ignored.
+
+---
+
+# Decision 34 - Accept Final LQR Validation
+
+## Decision
+
+The actuator-constrained LQR controller was accepted as a valid project solution.
+
+Validation status:
+
+* Closed-Loop Stability = PASS
+* Tracking = PASS
+* Actuator Output = PASS
+* Overall LQR Validation = PASS
+
+## Reason
+
+The controller achieved the required tracking performance while the actuator constraint was explicitly represented and verified.
+
+The final result demonstrates that controller validation must consider both ideal control demand and physical actuator behaviour.
+
+---
+
+# FINAL PROJECT DECISIONS
+
+---
+
+# Decision 35 - Retain P, PI, PID and LQR Stages
+
+## Decision
+
+All four controller stages are retained in the final project.
+
+Controller purposes:
+
+P
+Baseline proportional control
+
+PI
+Steady-state error reduction
+
+PID
+Classical transient-performance benchmark
+
+LQR
+Modern state-space and actuator-aware control
+
+## Reason
+
+The stages demonstrate a clear engineering progression:
+
+P -> PI -> PID -> LQR
+
+Each stage adds a distinct engineering concept rather than unnecessary controller variety.
+
+---
+
+# Decision 36 - Use Measured Evidence for Controller Selection
+
+## Decision
+
+Controller decisions are based on simulation results, sensitivity studies, validation metrics, and physical constraints.
+
+## Reason
+
+Controller selection based solely on visual response or intuition is insufficient for a professional engineering workflow.
+
+The project therefore combines:
+
+Performance
++
+Stability
++
+Control Effort
++
+Actuator Capability
++
+Validation
+
+---
+
+# Decision 37 - Freeze Project Scope
+
+## Decision
+
+Professional V2 is considered complete after:
+
+* P controller development
+* PI controller development
+* PID controller development
+* LQR controller development
+* Sensitivity analysis
+* Actuator modelling
+* Actuator-constrained validation
+* MATLAB implementation
+* Simulink implementation
+* Cross-validation
+* Engineering documentation
+
+Advanced controllers such as MPC and H-infinity control are intentionally excluded.
+
+## Reason
+
+The objective is to demonstrate a complete and validated control-engineering workflow rather than maximize the number of controller types.
+
+Additional controller families would increase project complexity without a corresponding requirement from the current system objective.
+
+---
+
+# Decision 38 - Final Engineering Architecture
+
+## Decision
+
+The final project follows:
+
+Physical Model
+|
+v
+Controller Design
+|
+v
+Sensitivity Analysis
+|
+v
+MATLAB Simulation
+|
+v
+Simulink Implementation
+|
+v
+Cross-Validation
+|
+v
+Actuator Constraint Validation
+|
+v
+Engineering Documentation
+
+## Final Engineering Position
+
+The project demonstrates the complete development cycle of a control system:
+
+Model -> Design -> Analyse -> Implement -> Validate -> Document
+
+The final design decisions emphasize:
+
+* Modular implementation
+* Evidence-based controller tuning
+* Separation of plant and controller design
+* Independent MATLAB-Simulink verification
+* Practical derivative filtering
+* State-space modelling
+* Controllability verification
+* Q/R trade-off analysis
+* Explicit actuator constraints
+* Transparent reporting of saturation
+* Controlled project scope
+
+Final Status:
+
+PROJECT 01 - AUTOMOTIVE CRUISE CONTROL SYSTEM
+PROFESSIONAL V2
+READY FOR FREEZE
